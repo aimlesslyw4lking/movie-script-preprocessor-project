@@ -73,7 +73,7 @@ def lemmatize_and_clean(char_lines: dict) -> dict[str, int]:
     and their tokenized lines
 
     Returns: char_lines_clean: dict[str, int] - Key-value pairs of the character
-    and their lines that are tokenized and cleaned from most popular stopwords
+    and their lines that are tokenized and cleaned from some of the most popular stopwords
     """
     
     morph = pymorphy3.MorphAnalyzer()
