@@ -5,22 +5,16 @@ from spacy.lang.ru import Russian
 
 
 class ScriptNotFoundError(Exception):
-    def __init__(self, message="No scripts found! :( n\
-              Try to manually check your raw_scripts folder"):
-        super().__init__(message)
+   """Raised when the .txt file containing a script was not found in the destinated folder """
 
 class ScriptCompilationError(Exception):
-    def __init__(self, message="Oh no! Something went wrong during the compilation..."):
-        super().__init__(message)
+    """Raised when an error occurs during tokenization and parsing into a dictionary """
 
 class ScriptPreprocessingError(Exception):
-    def __init__(self, message="Oh no! Something went wrong during the final stage of preprocessing..."):
-        super().__init__(message)
+    """Raised when an error occurs during the lemmatization and stopword extraction """
 
 class CleanScriptNotWrittenError(Exception):
-    def __init__(self, message="It looks like the clean script has failed to be written..."):
-        super().__init__(message)
-
+    """Raised when the cleaned .txt corpus file fails to be written """
 
 def find_scripts():
     """
@@ -115,43 +109,10 @@ def write_cleaned_file(char_lines_clean: dict[str, int]) -> bool:
             file_words = " ".join(tokens)
         
             file_path.write_text(file_words, encoding='utf-8')
-            print(f"File saved! : {file_path}")
-            
+            print(f"Saved one! - {file_path}!")
+
+        print('Your files are good to go now :3')
         return True
         
-    except CleanScriptNotWrittenError as e:
-        print(f"Oh no! Something went wrong during the writing process: {e}")
+    except CleanScriptNotWrittenError:
         return False
-
-def main():
-
-    """ 
-    Launches implementation (and treats you like a cutie pie)
-    """
-
-    print('Hi!! <3      Looking for your scripts now...')
-    scripts = find_scripts()
-    
-    if not scripts:
-        raise ScriptNotFoundError()
-        
-    print("Scripts found! Let's compile them now <3")
-    compiled_scripts = tokenize_and_compile(scripts)
-    
-    if not compiled_scripts:
-        raise ScriptCompilationError()
-        
-    print("Your scripts have been compiled successfully! ^_^ ")
-    cleaned_scripts = lemmatize_and_clean(compiled_scripts)
-
-    if not cleaned_scripts:
-        raise ScriptPreprocessingError()
-        
-    print("Yay! The scripts are ready! Let's upload them to a folder now")
-    uploaded_scripts = write_cleaned_file(cleaned_scripts)
-    
-    if not uploaded_scripts:
-        raise CleanScriptNotWrittenError()
-
-if __name__ == "__main__":
-    main()
