@@ -1,5 +1,5 @@
 from pathlib import Path
-import pymorphy3
+# import pymorphy3
 from spacy.lang.ru import Russian
 
 
@@ -70,19 +70,19 @@ def lemmatize_and_clean(char_lines: dict) -> dict[str, int]:
     and their lines that are tokenized and cleaned from some of the most popular stopwords
     """
     
-    morph = pymorphy3.MorphAnalyzer()
+    # morph = pymorphy3.MorphAnalyzer()
     stopwords = Russian().Defaults.stop_words
 
     char_lines_clean = {}
+    
+    # for name in char_lines:
+    #     char_lines[name] = [
+    #         morph.parse(token)[0].normal_form
+    #         for token in char_lines[name]
+    #     ]
 
     for name in char_lines:
-        char_lines[name] = [
-            morph.parse(token)[0].normal_form
-            for token in char_lines[name]
-        ]
-
-        char_lines_clean[name] = [
-            word for word in char_lines[name]
+        char_lines_clean[name] = [word for word in char_lines[name]
             if word not in stopwords
             ]
 
