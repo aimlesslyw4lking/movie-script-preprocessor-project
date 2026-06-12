@@ -1,44 +1,105 @@
 from pathlib import Path
 
-MIN_COLUMNS = 10
-POS_STOP_TAG = "PUNCT"
 
-input_folder = Path("input_conllu")
-output_folder = Path("output_antconc")
+class ConverterError(Exception):
+    """
+    Base exception class for all converter-related errors.
+    """
 
-output_folder.mkdir(exist_ok=True)
 
-for input_path in input_folder.glob("*.conllu"):
-    subcorpus = input_path.stem
-        
-    antconc_tokens = []
-        
-    with input_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            if line.startswith("#") or not line.strip():
-                continue
-                
-            columns = line.split("\t")
-                
-            if len(columns) < MIN_COLUMNS or columns[3] == POS_STOP_TAG:
-                continue
-                
-            word   = columns[1]
-            lemma  = columns[2]
-            pos    = columns[3]
-            deprel = columns[7]
+class SourceFolderNotFoundError(ConverterError):
+    """
+    Raised when the specified input folder does not exist.
+    """
+
+
+class NoConlluFilesFoundError(ConverterError):
+    """
+    Raised when no CoNLL-U files are found in the source directory.
+    """
+
+
+class EmptyFileError(ConverterError):
+    """
+    Raised when a file contains no valid tokens to process.
+    """
+
+
+class Converter:
+    """
+    Handles bulk conversion of CoNLL-U files into linear text format for AntConc.
+    """
+
+    MIN_COLUMNS: int = 10
+    POS_STOP_TAG: str = "PUNCT"
+    DEFAULT_INPUT_DIR: Path = Path("input_conllu")
+    DEFAULT_OUTPUT_DIR: Path = Path("output_antconc")
+
+    def __init__(self, input_folder: str | Path | None = None, output_folder: str | Path | None = None):
+        """
+        Initializes the converter with custom paths or uses standard defaults.
+        """
+        self.input_folder = Path(input_folder) if input_folder else self.DEFAULT_INPUT_DIR
+        self.output_folder = Path(output_folder) if output_folder else self.DEFAULT_OUTPUT_DIR
+
+    def _parse_line(self, line: str, subcorpus: str) -> str | None:
+        """
+        Parses a single CoNLL-U line and formats it into a custom token string.
+        """
+        if line.startswith("#") or not line.strip():
+            return None
             
-            antconc_tokens.append(
-                f"{word}#{lemma}#{pos}#{deprel}#{subcorpus}"
-                )
-
-    if not antconc_tokens:
-        print(f"Пропущен файл (токены не найдены): {input_path.name}")
-        continue
-
-    output_path = output_folder / f"{subcorpus}_ready.txt"
+        columns = line.split("\t")
+            
+        if len(columns) < self.MIN_COLUMNS or columns[3] == self.POS_STOP_TAG:
+            return None
+            
+        word   = columns[1]
+        lemma  = columns[2]
+        pos    = columns[3]
+        deprel = columns[7]
         
-    output_path.write_text(" ".join(antconc_tokens), encoding="utf-8")
-    print(f"Успешно обработан файл: {input_path.name} -> {output_path.name}")
+        return f"{word}#{lemma}#{pos}#{deprel}#{subcorpus}"
+    
+    def convert_single_file(self, input_path: Path) -> Path:
+        """
+        Processes a single CoNLL-U file and writes the extracted tokens to a text file.
+        """
+        subcorpus = input_path.stem
+        antconc_tokens = []
+        
+        with input_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                token = self._parse_line(line, subcorpus)
+                if token:
+                    antconc_tokens.append(token)
 
-print("\nВсе файлы готовы для загрузки в AntConc!")
+        if not antconc_tokens:
+            raise EmptyFileError(f"File {input_path.name} contains no valid tokens for processing.")
+
+        output_path = self.output_folder / f"{subcorpus}_ready.txt"
+        output_path.write_text(" ".join(antconc_tokens), encoding="utf-8")
+        return output_path
+    
+    def convert_all(self) -> list[Path]:
+        """
+        Discovers, validates, and converts all CoNLL-U files in the input directory.
+        """
+        if not self.input_folder.exists():
+            raise SourceFolderNotFoundError(f"Source folder not found: {self.input_folder}")
+
+        conllu_files = list(self.input_folder.glob("*.conllu"))
+        if not conllu_files:
+            raise NoConlluFilesFoundError(f"No *.conllu files found in folder: {self.input_folder}")
+
+        self.output_folder.mkdir(exist_ok=True)
+        processed_files = []
+
+        for input_path in conllu_files:
+            try:
+                output_path = self.convert_single_file(input_path)
+                processed_files.append(output_path)
+            except EmptyFileError:
+                raise
+
+        return processed_files

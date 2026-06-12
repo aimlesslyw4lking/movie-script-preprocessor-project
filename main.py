@@ -1,6 +1,7 @@
 """Launch implementation"""
 
 import processor as pr
+import converter as cv
 
 def main():
 
@@ -31,6 +32,13 @@ def main():
     
     if not uploaded_scripts:
         raise pr.CleanScriptNotWrittenError("")
+
+    converter = cv.Converter()
+    try:
+        converted_files = converter.convert_all()
+        print(f"Successfully processed {len(converted_files)} files.")
+    except cv.ConverterError as e:
+        print(f"Pipeline execution halted due to converter error: {e}")
 
 if __name__ == "__main__":
     main()
