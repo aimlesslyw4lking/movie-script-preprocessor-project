@@ -32,6 +32,33 @@ class Converter:
 
     MIN_COLUMNS: int = 10
     POS_STOP_TAG: str = "PUNCT"
+    STOP_POS: set[str] = {
+    "ADP",      # предлоги
+    "CCONJ",    # сочинительные союзы
+    "SCONJ",    # подчинительные союзы
+    "PART",     # частицы
+    "INTJ"      # междометия
+    }
+
+    STOP_LEMMAS: set[str] = {
+        "и", "а", "но",
+        "в", "во",
+        "на",
+        "с", "со",
+        "к", "ко",
+        "по",
+        "у",
+        "из",
+        "за",
+        "что",
+        "это",
+        "как",
+        "же",
+        "ли",
+        "бы",
+        "не",
+        "ни"
+    }
     DEFAULT_INPUT_DIR: Path = Path("input_conllu")
     DEFAULT_OUTPUT_DIR: Path = Path("output_antconc")
 
@@ -50,14 +77,23 @@ class Converter:
             return None
             
         columns = line.split("\t")
-            
-        if len(columns) < self.MIN_COLUMNS or columns[3] == self.POS_STOP_TAG:
+
+        if len(columns) < self.MIN_COLUMNS:
             return None
-            
+
         word   = columns[1]
         lemma  = columns[2]
         pos    = columns[3]
         deprel = columns[7]
+
+        if pos == self.POS_STOP_TAG:
+            return None
+
+        if pos in self.STOP_POS:
+            return None
+
+        if lemma.lower() in self.STOP_LEMMAS:
+            return None
         
         return f"{word}#{lemma}#{pos}#{deprel}#{subcorpus}"
     
