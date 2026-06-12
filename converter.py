@@ -1,56 +1,44 @@
-import os
+from pathlib import Path
 
-# Укажите путь к папке, где лежат ваши файлы .conllu
-input_folder = "input_conllu"
-# Укажите папку, куда сохранить готовые файлы для AntConc
-output_folder = "output_antconc"
+MIN_COLUMNS = 10
+POS_STOP_TAG = "PUNCT"
 
-# Создаем папку для результата, если ее нет
-os.makedirs(output_folder, exist_ok=True)
+input_folder = Path("input_conllu")
+output_folder = Path("output_antconc")
 
-# Проверяем все файлы в папке
-for filename in os.listdir(input_folder):
-    if filename.endswith(".conllu"):
-        input_path = os.path.join(input_folder, filename)
+output_folder.mkdir(exist_ok=True)
+
+for input_path in input_folder.glob("*.conllu"):
+    subcorpus = input_path.stem
         
-        # Берем имя файла без расширения в качестве маркера подкорпуса (например, "крош")
-        subcorpus = os.path.splitext(filename)[0]
+    antconc_tokens = []
         
-        antconc_tokens = []
-        
-        with open(input_path, "r", encoding="utf-8") as f:
-            for line in f:
-                # Пропускаем технические комментарии UDPipe и пустые строки
-                if line.startswith("#") or not line.strip():
-                    continue
+    with input_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():
+                continue
                 
-                columns = line.split("\t")
+            columns = line.split("\t")
                 
-                # Проверяем, что в строке достаточно колонок (в CoNLL-U их должно быть 10)
-                if len(columns) < 10:
-                    continue
+            if len(columns) < MIN_COLUMNS or columns[3] == POS_STOP_TAG:
+                continue
                 
-                word = columns[1]       # 2-я колонка: Слово (FORM)
-                lemma = columns[2]      # 3-я колонка: Лемма (LEMMA)
-                pos = columns[3]        # 4-я колонка: Часть речи (UPOS)
-                deprel = columns[7]     # 8-я колонка: Синтаксическая роль (DEPREL)
-                
-                # Пропускаем знаки препинания, если они не нужны как слова с ролями
-                if pos == "PUNCT":
-                    continue
-                
-                # Собираем токен в формате: слово#лемма#чр#роль#подкорпус
-                # Пример: мыла#мыть#VERB#root#крош
-                token = f"{word}#{lemma}#{pos}#{deprel}#{subcorpus}"
-                antconc_tokens.append(token)
-        
-        # Сохраняем результат в линейную строку через пробел
-        output_filename = f"{subcorpus}_ready.txt"
-        output_path = os.path.join(output_folder, output_filename)
-        
-        with open(output_path, "w", encoding="utf-8") as f_out:
-            f_out.write(" ".join(antconc_tokens))
+            word   = columns[1]
+            lemma  = columns[2]
+            pos    = columns[3]
+            deprel = columns[7]
             
-        print(f"Успешно обработан файл: {filename} -> {output_filename}")
+            antconc_tokens.append(
+                f"{word}#{lemma}#{pos}#{deprel}#{subcorpus}"
+                )
+
+    if not antconc_tokens:
+        print(f"Пропущен файл (токены не найдены): {input_path.name}")
+        continue
+
+    output_path = output_folder / f"{subcorpus}_ready.txt"
+        
+    output_path.write_text(" ".join(antconc_tokens), encoding="utf-8")
+    print(f"Успешно обработан файл: {input_path.name} -> {output_path.name}")
 
 print("\nВсе файлы готовы для загрузки в AntConc!")
